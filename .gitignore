@@ -1,0 +1,7 @@
+kafka_local/
+kafka/data/
+data/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+.env
