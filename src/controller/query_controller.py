@@ -1,9 +1,11 @@
 from typing import Optional
-from fastapi import Query, Path, status
+from fastapi import Query, Path, status, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 from src.schema.common_schema import ApiResponse
 from src.service.query_service import QueryService
+from src.db.database import get_db
 
 class QueryController:
     @staticmethod
@@ -13,7 +15,8 @@ class QueryController:
         offset: int = Query(0, ge=0, description="Pagination offset"),
         rti_query_id: Optional[str] = Query(None, description="Specific RTI query ID"),
         assigned_to: Optional[str] = Query(None, description="Filter by assigned user"),
-        unassigned_only: bool = Query(False, description="Filter to unassigned queries only")
+        unassigned_only: bool = Query(False, description="Filter to unassigned queries only"),
+        db: Session = Depends(get_db)
     ):
         # Validation: 400 if unassigned_only is combined with assigned_to
         if unassigned_only and assigned_to:
@@ -39,6 +42,7 @@ class QueryController:
 
         # Fetch records from service
         records = QueryService.fetch_rti_queries(
+            db=db,
             status_id=status_id,
             limit=limit,
             offset=offset,
@@ -67,9 +71,9 @@ class QueryController:
         )
 
     @staticmethod
-    def fetch_rti_query_count():
+    def fetch_rti_query_count(db: Session = Depends(get_db)):
         try:
-            data = QueryService.fetch_rti_query_count()
+            data = QueryService.fetch_rti_query_count(db)
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
@@ -89,8 +93,11 @@ class QueryController:
             )
 
     @staticmethod
-    def fetch_rti_query_detail(rti_query_id: str = Path(..., description="The query ID")):
-        detail = QueryService.fetch_rti_query_detail(rti_query_id)
+    def fetch_rti_query_detail(
+        rti_query_id: str = Path(..., description="The query ID"),
+        db: Session = Depends(get_db)
+    ):
+        detail = QueryService.fetch_rti_query_detail(db, rti_query_id)
         if detail is None:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,

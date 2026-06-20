@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from src.router.query_router import router as query_router
 from src.router.master_router import router as master_router
 from src.router.chat_router import router as chat_router
+from src.db.init_db import init_db
+
+# Initialize database and tables
+init_db()
 
 app = FastAPI(
     title="MEERA API Backend",

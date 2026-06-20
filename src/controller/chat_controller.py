@@ -1,12 +1,14 @@
-from fastapi import status, Query
+from fastapi import status, Query, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 from src.schema.chat_schema import UserQueryRequest, GetSuggestionRequest
 from src.service.chat_service import ChatService
+from src.db.database import get_db
 
 class ChatController:
     @staticmethod
-    def user_query(request: UserQueryRequest):
+    def user_query(request: UserQueryRequest, db: Session = Depends(get_db)):
         if not request.user_query.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -35,18 +37,28 @@ class ChatController:
                 }
             )
 
-        data = ChatService.user_query(request)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": [item.model_dump() for item in data],
-                "message": "Query processed successfully",
-                "error": None
-            }
-        )
+        try:
+            data = ChatService.user_query(db, request)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "data": [item.model_dump() for item in data],
+                    "message": "Query processed successfully",
+                    "error": None
+                }
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "data": [],
+                    "message": "Failed to process query",
+                    "error": str(e)
+                }
+            )
 
     @staticmethod
-    def get_suggestion(request: GetSuggestionRequest):
+    def get_suggestion(request: GetSuggestionRequest, db: Session = Depends(get_db)):
         if not request.rti_query_id.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -66,20 +78,31 @@ class ChatController:
                 }
             )
 
-        data = ChatService.get_suggestion(request)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data": [item.model_dump() for item in data],
-                "message": "Suggestion retrieved successfully",
-                "error": None
-            }
-        )
+        try:
+            data = ChatService.get_suggestion(db, request)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "data": [item.model_dump() for item in data],
+                    "message": "Suggestion retrieved successfully",
+                    "error": None
+                }
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "data": [],
+                    "message": "Failed to retrieve suggestion",
+                    "error": str(e)
+                }
+            )
 
     @staticmethod
     def get_session(
         rti_query_id: str = Query(..., description="Filter based on rti_query_id"),
-        user_id: str = Query(..., description="Filter based on user_id")
+        user_id: str = Query(..., description="Filter based on user_id"),
+        db: Session = Depends(get_db)
     ):
         if not rti_query_id.strip():
             return JSONResponse(
@@ -101,7 +124,7 @@ class ChatController:
             )
 
         try:
-            data = ChatService.get_session(rti_query_id, user_id)
+            data = ChatService.get_session(db, rti_query_id, user_id)
             if data is None:
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,

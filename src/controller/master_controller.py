@@ -1,12 +1,17 @@
-from fastapi import status, Query
+from fastapi import status, Query, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
 from src.schema.master_schema import UploadDepartmentMasterRequest
 from src.service.master_service import MasterService
+from src.db.database import get_db
 
 class MasterController:
     @staticmethod
-    def upload_department_master(request: UploadDepartmentMasterRequest):
+    def upload_department_master(
+        request: UploadDepartmentMasterRequest,
+        db: Session = Depends(get_db)
+    ):
         if not request.department.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -27,7 +32,7 @@ class MasterController:
             )
 
         try:
-            data = MasterService.upload_department_master(request)
+            data = MasterService.upload_department_master(db, request)
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
@@ -48,7 +53,8 @@ class MasterController:
 
     @staticmethod
     def get_department_master(
-        department: str = Query(..., description="Filter based on department")
+        department: str = Query(..., description="Filter based on department"),
+        db: Session = Depends(get_db)
     ):
         if not department.strip():
             return JSONResponse(
@@ -61,7 +67,7 @@ class MasterController:
             )
 
         try:
-            data = MasterService.get_department_master(department)
+            data = MasterService.get_department_master(db, department)
             if data is None:
                 return JSONResponse(
                     status_code=status.HTTP_200_OK,
