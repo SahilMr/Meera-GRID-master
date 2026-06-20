@@ -1,20 +1,17 @@
-from typing import Optional
-from fastapi import Query, status
+from fastapi import status, Query
 from fastapi.responses import JSONResponse
 
-from src.schema.common_schema import ApiResponse
-from src.schema.chat_schema import ChatSubmitRequest
+from src.schema.chat_schema import UserQueryRequest, GetSuggestionRequest
 from src.service.chat_service import ChatService
 
 class ChatController:
     @staticmethod
-    def submit_rti_query(request: ChatSubmitRequest):
-        # Validation checks
+    def user_query(request: UserQueryRequest):
         if not request.user_query.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "data": None,
+                    "data": [],
                     "message": "user_query cannot be empty",
                     "error": "EMPTY_USER_QUERY"
                 }
@@ -23,86 +20,111 @@ class ChatController:
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "data": None,
+                    "data": [],
                     "message": "user_id cannot be empty",
                     "error": "EMPTY_USER_ID"
                 }
             )
+        if not request.rti_query_id.strip():
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "data": [],
+                    "message": "rti_query_id cannot be empty",
+                    "error": "EMPTY_RTI_QUERY_ID"
+                }
+            )
 
-        data = ChatService.submit_rti_query(request)
+        data = ChatService.user_query(request)
         return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
+            status_code=status.HTTP_200_OK,
             content={
-                "data": {
-                    "rti_query_id": data.rti_query_id,
-                    "inward_id": data.inward_id
-                },
-                "message": "RTI query and inward record created successfully",
+                "data": [item.model_dump() for item in data],
+                "message": "Query processed successfully",
                 "error": None
             }
         )
 
     @staticmethod
-    def fetch_faq(department: Optional[str] = Query(None, description="Filter FAQs by department")):
-        data = ChatService.fetch_faqs(department)
-        return ApiResponse(
-            data=data,
-            message="FAQs retrieved successfully",
-            error=None
-        )
-
-    @staticmethod
-    def search_similar_queries(
-        rti_query: str = Query(..., description="Query text to find matches for"),
-        department: Optional[str] = Query(None, description="Department filter"),
-        user_id: Optional[str] = Query(None, description="User ID filter"),
-        limit: int = Query(5, ge=1, le=20, description="Max matches to return")
-    ):
-        if not rti_query.strip():
+    def get_suggestion(request: GetSuggestionRequest):
+        if not request.rti_query_id.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "data": [],
-                    "message": "rti_query parameter cannot be empty",
-                    "error": "EMPTY_RTI_QUERY"
+                    "message": "rti_query_id cannot be empty",
+                    "error": "EMPTY_RTI_QUERY_ID"
                 }
             )
-
-        data = ChatService.search_similar_queries(
-            rti_query=rti_query,
-            department=department,
-            user_id=user_id,
-            limit=limit
-        )
-        return ApiResponse(
-            data=data,
-            message="Similar queries retrieved successfully",
-            error=None
-        )
-
-    @staticmethod
-    def suggest_faq_match(
-        rti_query: str = Query(..., description="Draft query text to match"),
-        department: Optional[str] = Query(None, description="Department filter"),
-        limit: int = Query(3, ge=1, le=10, description="Max suggestions to return")
-    ):
-        if not rti_query.strip():
+        if not request.user_id.strip():
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "data": [],
-                    "message": "rti_query parameter cannot be empty",
-                    "error": "EMPTY_RTI_QUERY"
+                    "message": "user_id cannot be empty",
+                    "error": "EMPTY_USER_ID"
                 }
             )
 
-        data = ChatService.suggest_faq_matches(
-            rti_query=rti_query,
-            department=department,
-            limit=limit
+        data = ChatService.get_suggestion(request)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data": [item.model_dump() for item in data],
+                "message": "Suggestion retrieved successfully",
+                "error": None
+            }
         )
-        return ApiResponse(
-            data=data,
-            message="FAQ matches suggested successfully",
-            error=None
-        )
+
+    @staticmethod
+    def get_session(
+        rti_query_id: str = Query(..., description="Filter based on rti_query_id"),
+        user_id: str = Query(..., description="Filter based on user_id")
+    ):
+        if not rti_query_id.strip():
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "data": None,
+                    "message": "rti_query_id query parameter cannot be empty",
+                    "error": "EMPTY_RTI_QUERY_ID"
+                }
+            )
+        if not user_id.strip():
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={
+                    "data": None,
+                    "message": "user_id query parameter cannot be empty",
+                    "error": "EMPTY_USER_ID"
+                }
+            )
+
+        try:
+            data = ChatService.get_session(rti_query_id, user_id)
+            if data is None:
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content={
+                        "data": None,
+                        "message": "Session not found",
+                        "error": None
+                    }
+                )
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "data": data.model_dump(),
+                    "message": "Session retrieved successfully",
+                    "error": None
+                }
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "data": [],
+                    "message": "Unexpected failure occurred",
+                    "error": str(e)
+                }
+            )

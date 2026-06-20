@@ -1,13 +1,15 @@
 from src.schema.common_schema import ApiResponse
 from src.schema.query_schema import (
-    RtiQueryItem, RtiQueryCountData, OfficeNoteItem, RtiQueryDetailData, AssignRtiQueryResponseData
-)
-from src.schema.inward_schema import (
-    InwardCreateRequest, InwardCreateResponseData, InwardDetailData,
-    OfficeNoteCreateRequest, OfficeNoteCreateResponseData, OfficeNoteDetailData
+    RtiQueryItem, RtiQueryCountData, OfficeNoteItem, RtiQueryDetailData
 )
 from src.schema.chat_schema import (
-    ChatSubmitRequest, ChatSubmitResponseData, FaqItem, SimilarQueryItem, FaqSuggestItem
+    UserQueryRequest, UserQueryResponseData,
+    GetSuggestionRequest, GetSuggestionResponseData,
+    GetSessionResponseData
+)
+from src.schema.master_schema import (
+    UploadRecordItem, UploadDepartmentMasterRequest, UploadDepartmentMasterResponseData,
+    GetDepartmentMasterRecord, GetDepartmentMasterResponseData
 )
 
 __all__ = [
@@ -16,16 +18,14 @@ __all__ = [
     "RtiQueryCountData",
     "OfficeNoteItem",
     "RtiQueryDetailData",
-    "AssignRtiQueryResponseData",
-    "InwardCreateRequest",
-    "InwardCreateResponseData",
-    "InwardDetailData",
-    "OfficeNoteCreateRequest",
-    "OfficeNoteCreateResponseData",
-    "OfficeNoteDetailData",
-    "ChatSubmitRequest",
-    "ChatSubmitResponseData",
-    "FaqItem",
-    "SimilarQueryItem",
-    "FaqSuggestItem",
+    "UserQueryRequest",
+    "UserQueryResponseData",
+    "GetSuggestionRequest",
+    "GetSuggestionResponseData",
+    "GetSessionResponseData",
+    "UploadRecordItem",
+    "UploadDepartmentMasterRequest",
+    "UploadDepartmentMasterResponseData",
+    "GetDepartmentMasterRecord",
+    "GetDepartmentMasterResponseData",
 ]

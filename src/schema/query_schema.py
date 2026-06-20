@@ -31,8 +31,3 @@ class RtiQueryDetailData(BaseModel):
     assigned_at: Optional[str] = None
     supporting_documents: List[str]
     office_notes: List[OfficeNoteItem]
-
-class AssignRtiQueryResponseData(BaseModel):
-    rti_query_id: str
-    assigned_to: str
-    assigned_at: str

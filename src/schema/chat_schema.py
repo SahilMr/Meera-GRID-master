@@ -1,29 +1,35 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
-class ChatSubmitRequest(BaseModel):
+# user_query API
+class UserQueryRequest(BaseModel):
     user_query: str
     user_id: str
-    department_id: int
-
-class ChatSubmitResponseData(BaseModel):
     rti_query_id: str
-    inward_id: str
 
-class FaqItem(BaseModel):
-    faq_id: str
-    question: str
-    answer: str
+class UserQueryResponseData(BaseModel):
+    query_id: str
+    asst_response: str
+    source: List[str]
 
-class SimilarQueryItem(BaseModel):
+# get_suggestion API
+class GetSuggestionRequest(BaseModel):
     rti_query_id: str
-    query_text: str
-    resolution: Optional[str] = None
-    department: str
-    relevance_score: float
+    user_id: str
 
-class FaqSuggestItem(BaseModel):
-    faq_id: str
-    question: str
-    answer: str
-    relevance_score: float
+class GetSuggestionResponseData(BaseModel):
+    suggestion_id: str
+    asst_suggestion: str
+    source: List[str]
+
+# get_session API
+class GetSessionChatItem(BaseModel):
+    user_query: str
+    user_query_id: str
+    source: str
+    asst_response: str
+
+class GetSessionResponseData(BaseModel):
+    rti_query_id: str
+    asst_suggestion: str
+    chat: List[GetSessionChatItem]

@@ -1,28 +1,28 @@
 from fastapi import APIRouter
 from src.controller.chat_controller import ChatController
 
-router = APIRouter(tags=["Chat & FAQ Deflection"])
+router = APIRouter(tags=["Chat"])
 
-# POST submit_rti_query
+# POST user_query
 router.add_api_route(
-    "/chat/submit",
-    ChatController.submit_rti_query,
+    "/user_query",
+    ChatController.user_query,
     methods=["POST"],
-    summary="Citizen-facing intake for creating inward and RTI query"
+    summary="Citizen/user-facing query to assistant"
 )
 
-# GET fetch_faq
+# POST get_suggestion
 router.add_api_route(
-    "/faqs",
-    ChatController.fetch_faq,
-    methods=["GET"],
-    summary="Fetch FAQs (optionally filtered by department)"
+    "/get-suggestion",
+    ChatController.get_suggestion,
+    methods=["POST"],
+    summary="Trigger suggestion request if no existing session"
 )
 
-# GET suggest_faq_match
+# GET get_session
 router.add_api_route(
-    "/faqs/suggest",
-    ChatController.suggest_faq_match,
+    "/get-session",
+    ChatController.get_session,
     methods=["GET"],
-    summary="Suggest existing FAQ entries matching citizen draft queries"
+    summary="Fetch chat history and suggestion for a query"
 )
