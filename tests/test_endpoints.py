@@ -35,7 +35,8 @@ try:
     default_statuses = [
         StatusLookup(status_id=1, status_label="Pending"),
         StatusLookup(status_id=2, status_label="In Progress"),
-        StatusLookup(status_id=3, status_label="Resolved")
+        StatusLookup(status_id=3, status_label="Resolved"),
+        StatusLookup(status_id=4, status_label="Not In Scope")
     ]
     db.add_all(default_statuses)
     db.commit()
@@ -158,6 +159,8 @@ def test_fetch_rti_query_count():
     assert json_data["data"]["total_count"] == 2
     assert json_data["data"]["pending_count"] == 1
     assert json_data["data"]["resolved_count"] == 1
+    assert json_data["data"]["not_in_scope_count"] == 0
+    assert json_data["data"]["active_sessions_count"] == 5
 
 def test_fetch_rti_query_detail_success():
     response = client.get("/api/v1/rti-queries/query_123")

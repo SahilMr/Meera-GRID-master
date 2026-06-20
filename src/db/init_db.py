@@ -13,16 +13,19 @@ def init_db():
     # Seed initial data
     db = SessionLocal()
     try:
-        # Check if status lookup is empty
-        if db.query(StatusLookup).count() == 0:
-            default_statuses = [
-                StatusLookup(status_id=1, status_label="Pending"),
-                StatusLookup(status_id=2, status_label="In Progress"),
-                StatusLookup(status_id=3, status_label="Resolved")
-            ]
-            db.add_all(default_statuses)
-            db.commit()
-            print("Status lookup table seeded successfully.")
+        # Seed default statuses if they don't exist
+        default_statuses = [
+            (1, "Pending"),
+            (2, "In Progress"),
+            (3, "Resolved"),
+            (4, "Not In Scope")
+        ]
+        for sid, label in default_statuses:
+            status_obj = db.query(StatusLookup).filter(StatusLookup.status_id == sid).first()
+            if not status_obj:
+                db.add(StatusLookup(status_id=sid, status_label=label))
+        db.commit()
+        print("Status lookup table seeded/verified successfully.")
     except Exception as e:
         db.rollback()
         print(f"Error seeding database: {e}")

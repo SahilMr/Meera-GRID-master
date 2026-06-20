@@ -14,6 +14,8 @@ class RtiQueryCountData(BaseModel):
     total_count: int
     pending_count: int
     resolved_count: int
+    not_in_scope_count: int
+    active_sessions_count: int
 
 class OfficeNoteItem(BaseModel):
     office_note_id: str
