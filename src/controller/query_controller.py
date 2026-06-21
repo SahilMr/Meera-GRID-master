@@ -1,11 +1,10 @@
 import urllib.parse
 from typing import Optional
-from fastapi import Query, Path, Body, status, Depends
+from fastapi import Query, Path, Body, status, Depends, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-
 from src.schema.common_schema import ApiResponse
-from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest, RtiQueryUpdateRequest
+from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest
 from src.service.query_service import QueryService
 from src.db.database import get_db
 
@@ -209,17 +208,55 @@ class QueryController:
         )
 
     @staticmethod
-    def update_rti_query(
-        update_data: RtiQueryUpdateRequest = Body(...),
+    async def update_rti_query(
+        rti_query_id: str = Form(..., description="The query ID"),
+        status_id: Optional[int] = Form(None, description="Status lookup ID"),
+        remark: Optional[str] = Form(None, description="Remark for the query"),
+        collated_office_note: Optional[UploadFile] = File(None, description="Collated office note file"),
+        updated_by: str = Form("System", description="User performing update"),
         db: Session = Depends(get_db)
     ):
-        # rti_query_id = urllib.parse.unquote(rti_query_id)
+        file_bytes = None
+        if collated_office_note:
+            file_bytes = await collated_office_note.read()
+
         result = QueryService.update_rti_query(
             db=db,
-            rti_query_id=update_data.rti_query_id,
-            status_id=update_data.status_id,
-            remark=update_data.remark,
-            updated_by=update_data.updated_by
+            rti_query_id=rti_query_id,
+            status_id=status_id,
+            remark=remark,
+            collated_office_note=file_bytes,
+            updated_by=updated_by
+        )
+        
+        if result["success"]:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"data": None, "message": result["message"], "error": None}
+            )
+        else:
+            status_code = status.HTTP_404_NOT_FOUND if result.get("error") == "NOT_FOUND" else status.HTTP_400_BAD_REQUEST
+            return JSONResponse(
+                status_code=status_code,
+                content={"data": None, "message": result["message"], "error": result.get("error")}
+            )
+
+    @staticmethod
+    async def update_atomic_query(
+        atomic_query_id: str = Form(..., description="The atomic query ID"),
+        atomic_query_office_note: Optional[UploadFile] = File(None, description="Atomic query office note file"),
+        updated_by: str = Form("System", description="User performing update"),
+        db: Session = Depends(get_db)
+    ):
+        file_bytes = None
+        if atomic_query_office_note:
+            file_bytes = await atomic_query_office_note.read()
+
+        result = QueryService.update_atomic_query(
+            db=db,
+            atomic_query_id=atomic_query_id,
+            atomic_query_office_note=file_bytes,
+            updated_by=updated_by
         )
         
         if result["success"]:

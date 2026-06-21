@@ -60,3 +60,11 @@ router.add_api_route(
     methods=["PUT"],
     summary="Update an RTI Query status and add a remark"
 )
+
+# PUT update_atomic_query
+router.add_api_route(
+    "/rti-queries/atomic",
+    QueryController.update_atomic_query,
+    methods=["PUT"],
+    summary="Update an Atomic Query"
+)

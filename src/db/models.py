@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, LargeBinary
 from sqlalchemy.orm import relationship
 from src.db.database import Base
 
@@ -18,6 +18,7 @@ class RtiQuery(Base):
     applicant_email = Column(String, nullable=True)
     applicant_phone_number = Column(String(10), nullable=True)
     remark = Column(String, nullable=True)
+    collated_office_note = Column(LargeBinary, nullable=True)
     status_id = Column(Integer, ForeignKey("status_lookup.status_id"), nullable=False)
 
     status = relationship("StatusLookup")
@@ -130,3 +131,4 @@ class AtomicQuery(Base):
     inward_id = Column(String(100), nullable=True)
     office_note_id = Column(String(100), nullable=True)
     enclosure_id = Column(String(100), nullable=True)
+    atomic_query_office_note = Column(LargeBinary, nullable=True)

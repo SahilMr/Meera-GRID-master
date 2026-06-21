@@ -206,6 +206,7 @@ class QueryService:
         rti_query_id: str,
         status_id: Optional[int] = None,
         remark: Optional[str] = None,
+        collated_office_note: Optional[bytes] = None,
         updated_by: str = "System"
     ) -> dict:
         import datetime
@@ -223,8 +224,32 @@ class QueryService:
             if remark is not None:
                 rti_query.remark = remark
 
+            if collated_office_note is not None:
+                rti_query.collated_office_note = collated_office_note
+
             db.commit()
             return {"success": True, "message": "RTI Query updated successfully"}
         except Exception as e:
             db.rollback()
             return {"success": False, "message": f"Failed to update RTI query: {str(e)}", "error": "UPDATE_FAILED"}
+
+    @staticmethod
+    def update_atomic_query(
+        db: Session,
+        atomic_query_id: str,
+        atomic_query_office_note: Optional[bytes] = None,
+        updated_by: str = "System"
+    ) -> dict:
+        try:
+            atomic_query = db.query(AtomicQuery).filter(AtomicQuery.atomic_query_id == atomic_query_id).first()
+            if not atomic_query:
+                return {"success": False, "message": "Atomic Query not found", "error": "NOT_FOUND"}
+
+            if atomic_query_office_note is not None:
+                atomic_query.atomic_query_office_note = atomic_query_office_note
+
+            db.commit()
+            return {"success": True, "message": "Atomic Query updated successfully"}
+        except Exception as e:
+            db.rollback()
+            return {"success": False, "message": f"Failed to update Atomic Query: {str(e)}", "error": "UPDATE_FAILED"}

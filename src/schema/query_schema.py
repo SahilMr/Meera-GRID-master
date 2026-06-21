@@ -46,9 +46,3 @@ class AtomicQueryCreateRequest(BaseModel):
     inward_id: Optional[str] = None
     office_note_id: Optional[str] = None
     enclosure_id: Optional[str] = None
-
-class RtiQueryUpdateRequest(BaseModel):
-    status_id: Optional[int] = None
-    remark: Optional[str] = None
-    updated_by: Optional[str] = "System"
-    rti_query_id : str
