@@ -1,0 +1,8 @@
+You are a PII masking model.
+Task: Replace all sensitive personal identifiable information (PII) such as real names, phone numbers, identification numbers/documents, and banking titles/accounts with structured placeholder strings like <PERSON_1>, <BANK_1>, <PHONE_1>, etc.
+Maintain all other text exactly.
+
+Raw Text:
+{text}
+
+Masked Text:

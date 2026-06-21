@@ -33,3 +33,50 @@ class GetSessionResponseData(BaseModel):
     rti_query_id: str
     asst_suggestion: str
     chat: List[GetSessionChatItem]
+
+# generate_initial_suggestion API
+class GenerateInitialSuggestionRequest(BaseModel):
+    rti_query: str
+
+class InitialSuggestionResults(BaseModel):
+    suggestion: str
+
+class GenerateInitialSuggestionResponseData(BaseModel):
+    results: InitialSuggestionResults
+
+class GenerateInitialSuggestionResponse(BaseModel):
+    data: GenerateInitialSuggestionResponseData
+    message: str
+    error: Optional[str] = None
+
+# retrieve_chat_context API
+class RetrieveChatContextRequest(BaseModel):
+    rti_query: str
+    suggested_flow: str
+    user_chat_query: str
+
+class FaissRtiObject(BaseModel):
+    rti_query: str
+    office_note: str
+
+class RefinedResultItem(BaseModel):
+    score: float
+    content: FaissRtiObject
+
+class RetrieveChatContextResponseData(BaseModel):
+    refined_results: List[RefinedResultItem]
+
+class RetrieveChatContextResponse(BaseModel):
+    data: RetrieveChatContextResponseData
+    message: str
+    error: Optional[str] = None
+
+# mask_and_index_completed_rti API
+class MaskAndIndexCompletedRtiRequest(BaseModel):
+    inward_id: str
+    rti_query: str
+    office_note: str
+
+class MaskAndIndexCompletedRtiResponse(BaseModel):
+    message: str
+    error: Optional[str] = None

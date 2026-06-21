@@ -5,9 +5,13 @@ from src.router.query_router import router as query_router
 from src.router.master_router import router as master_router
 from src.router.chat_router import router as chat_router
 from src.db.init_db import init_db
+from src.core.singletons import get_faiss_index
 
 # Initialize database and tables
 init_db()
+
+# Cold boot FAISS and Embedding singletons on startup
+get_faiss_index()
 
 app = FastAPI(
     title="MEERA API Backend",
