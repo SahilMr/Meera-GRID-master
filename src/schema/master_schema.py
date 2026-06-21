@@ -18,6 +18,7 @@ class UploadDepartmentMasterResponseData(BaseModel):
 
 # get_department_master API
 class GetDepartmentMasterRecord(BaseModel):
+    id: int
     office: str
     division_section: str
     sub_section: str

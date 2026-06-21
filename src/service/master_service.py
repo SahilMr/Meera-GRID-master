@@ -61,6 +61,7 @@ class MasterService:
         return GetDepartmentMasterResponseData(
             records=[
                 GetDepartmentMasterRecord(
+                    id=r.id,
                     office=r.office,
                     division_section=r.division_section,
                     sub_section=r.sub_section,

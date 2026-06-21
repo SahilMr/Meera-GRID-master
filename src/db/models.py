@@ -13,12 +13,11 @@ class RtiQuery(Base):
     __tablename__ = "rti_query"
 
     rti_query_id = Column(String(36), primary_key=True)
-    inward_id = Column(String(100), nullable=False)
-    query_text = Column(Text, nullable=False)
-    department_id = Column(Integer, nullable=False)
+    rti_query = Column(String, nullable=True)
+    applicant_name = Column(String, nullable=True)
+    applicant_email = Column(String, nullable=True)
+    applicant_phone_number = Column(String(10), nullable=True)
     status_id = Column(Integer, ForeignKey("status_lookup.status_id"), nullable=False)
-    assigned_to = Column(String(100), nullable=True)
-    assigned_at = Column(String(50), nullable=True)
 
     status = relationship("StatusLookup")
     supporting_documents = relationship(
@@ -118,3 +117,15 @@ class DepartmentMappingMaster(Base):
     department = Column(String(100), nullable=False)
     user = Column(String(100), nullable=False)
     uploaded_at = Column(String(50), nullable=False)
+
+
+class AtomicQuery(Base):
+    __tablename__ = "atomic_query"
+
+    atomic_query_id = Column(String(36), primary_key=True)
+    rti_query_id = Column(String(36), ForeignKey("rti_query.rti_query_id"), nullable=False)
+    atomic_query = Column(String, nullable=False)
+    department_id = Column(Integer, ForeignKey("department_mapping_master.id"), nullable=False)
+    inward_id = Column(String(100), nullable=True)
+    office_note_id = Column(String(100), nullable=True)
+    enclosure_id = Column(String(100), nullable=True)

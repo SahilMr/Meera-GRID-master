@@ -33,3 +33,19 @@ class RtiQueryDetailData(BaseModel):
     assigned_at: Optional[str] = None
     supporting_documents: List[str]
     office_notes: List[OfficeNoteItem]
+
+class RtiQueryCreateRequest(BaseModel):
+    rti_query_id: str
+    rti_query: str
+    applicant_name: str
+    applicant_email: str
+    applicant_phone_number: str
+    status_id: int
+
+class AtomicQueryCreateRequest(BaseModel):
+    rti_query_id: str
+    atomic_query: str
+    department_id: str
+    inward_id: Optional[str] = None
+    office_note_id: Optional[str] = None
+    enclosure_id: Optional[str] = None
