@@ -7,7 +7,11 @@ dependencies = [
     "pytest>=9.1.1",
     "requests>=2.34.2",
     "sqlalchemy>=2.0.51",
+<<<<<<< HEAD
     "uv>=0.11.23",
+=======
+    "pysqlite3"
+>>>>>>> 111d8e68a45c5d43db57f0598beeebcb85ea054c
 ]
 
 [tool.pyright]
