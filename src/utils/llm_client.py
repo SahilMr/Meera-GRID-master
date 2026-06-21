@@ -2,46 +2,40 @@ import os
 import requests
 import re
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class LLMClient:
     @staticmethod
     def generate_completion(prompt: str) -> str:
-        # Check for Gemini API key
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if gemini_key:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-                headers = {"Content-Type": "application/json"}
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }]
-                }
-                response = requests.post(url, json=payload, headers=headers, timeout=10)
-                if response.status_code == 200:
-                    res_json = response.json()
-                    return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-            except Exception as e:
-                print(f"Error calling Gemini API: {e}")
-                
-        # Check for OpenAI API key
         openai_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
+        try:
+            temperature = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+        except ValueError:
+            temperature = 0.2
+
         if openai_key:
             try:
-                url = "https://api.openai.com/v1/chat/completions"
+                url = f"{base_url.rstrip('/')}/chat/completions"
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {openai_key}"
                 }
                 payload = {
-                    "model": "gpt-4o-mini",
+                    "model": model_name,
                     "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2
+                    "temperature": temperature
                 }
                 response = requests.post(url, json=payload, headers=headers, timeout=10)
                 if response.status_code == 200:
                     res_json = response.json()
                     return res_json["choices"][0]["message"]["content"].strip()
+                else:
+                    print(f"Error calling OpenAI API: Status {response.status_code}, Response: {response.text}")
             except Exception as e:
                 print(f"Error calling OpenAI API: {e}")
 

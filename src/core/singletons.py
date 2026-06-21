@@ -3,7 +3,7 @@ import threading
 from src.core.vectorstore import EmbeddingModel, FAISSIndex
 
 # Thread lock for initialization
-_init_lock = threading.Lock()
+_init_lock = threading.RLock()
 
 # Global singleton instances
 _embedding_model = None
@@ -20,6 +20,7 @@ def get_embedding_model() -> EmbeddingModel:
     return _embedding_model
 
 def get_faiss_index() -> FAISSIndex:
+    print("I AMA HERE")
     global _faiss_index
     if _faiss_index is None:
         with _init_lock:

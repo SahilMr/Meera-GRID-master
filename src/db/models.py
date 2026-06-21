@@ -20,11 +20,7 @@ class RtiQuery(Base):
     remark = Column(String, nullable=True)
     collated_office_note = Column(LargeBinary, nullable=True)
     status_id = Column(Integer, ForeignKey("status_lookup.status_id"), nullable=False)
-    inward_id = Column(String(100), nullable=True)
-    query_text = Column(String, nullable=True)
-    department_id = Column(Integer, nullable=True)
-    assigned_to = Column(String(100), nullable=True)
-    assigned_at = Column(String(50), nullable=True)
+    
 
     status = relationship("StatusLookup")
     supporting_documents = relationship(
