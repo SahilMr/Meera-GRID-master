@@ -1,0 +1,18 @@
+You are an expert assistant for processing RTI (Right to Information) queries.
+Given the current RTI query and the top 3 similar past RTI queries and their resolutions, please generate a detailed, structured, suggested action plan (next steps flow) for the officer to address the current query.
+
+Similar Past Case 1:
+RTI Query: {past_query_1}
+Office Note Resolution: {past_note_1}
+
+Similar Past Case 2:
+RTI Query: {past_query_2}
+Office Note Resolution: {past_note_2}
+
+Similar Past Case 3:
+RTI Query: {past_query_3}
+Office Note Resolution: {past_note_3}
+
+Current RTI Query: {rti_query}
+
+Suggested next steps flow for the officer:

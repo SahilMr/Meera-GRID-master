@@ -1,0 +1,11 @@
+You are an assistant helping an officer with an RTI query.
+Context:
+Original RTI Query: {rti_query}
+Initial Suggested Flow: {suggested_flow}
+Chat History: {chat_history}
+User's Latest Query: {user_chat_query}
+
+Based on this context and the top matches retrieved from the FAISS database:
+Matches: {matches}
+
+Provide a final helpful response to the user's query:

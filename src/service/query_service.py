@@ -26,7 +26,7 @@ class QueryService:
             return [
                 RtiQueryItem(
                     rti_query_id=query_obj.rti_query_id,
-                    query=query_obj.rti_query,
+                    query=query_obj.rti_query or query_obj.query_text or "",
                     status=query_obj.status.status_label,
                     remark=query_obj.remark
                 )
@@ -51,7 +51,7 @@ class QueryService:
         return [
             RtiQueryItem(
                 rti_query_id=q.rti_query_id,
-                query=q.rti_query,
+                query=q.rti_query or q.query_text or "",
                 status=q.status.status_label,
                 remark=q.remark
             ) for q in results

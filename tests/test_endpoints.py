@@ -365,6 +365,195 @@ def test_get_department_master_unexpected_failure():
     assert json_data["data"] == []
     assert "Simulated DB read failure" in json_data["error"]
 
+# ----------------- NEW API FLOWS TESTS -----------------
+
+def test_generate_initial_suggestion_success():
+    payload = {
+        "rti_query": "Please provide direct taxes zoning classification information."
+    }
+    response = client.post("/api/v1/generate_initial_suggestion", json=payload)
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["data"]["results"]["suggestion"] is not None
+    assert "Action Plan" in json_data["data"]["results"]["suggestion"]
+    assert json_data["error"] is None
+
+def test_generate_initial_suggestion_validation_error():
+    payload = {
+        "rti_query": "   "
+    }
+    response = client.post("/api/v1/generate_initial_suggestion", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_RTI_QUERY"
+
+def test_retrieve_chat_context_success():
+    payload = {
+        "rti_query": "Please provide direct taxes zoning classification information.",
+        "suggested_flow": "1. Verify details, 2. Routing, 3. Draft reply.",
+        "user_chat_query": "Which zone is revenue head office located in?"
+    }
+    response = client.post("/api/v1/retrieve_chat_context", json=payload)
+    assert response.status_code == 200
+    json_data = response.json()
+    assert "refined_results" in json_data["data"]
+    assert isinstance(json_data["data"]["refined_results"], list)
+    assert json_data["message"] is not None
+    assert "Based on the conversation state" in json_data["message"]
+    assert json_data["error"] is None
+
+def test_retrieve_chat_context_validation_error():
+    # Empty rti_query
+    payload = {
+        "rti_query": "",
+        "suggested_flow": "some flow",
+        "user_chat_query": "some query"
+    }
+    response = client.post("/api/v1/retrieve_chat_context", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_RTI_QUERY"
+
+    # Empty suggested_flow
+    payload = {
+        "rti_query": "some query",
+        "suggested_flow": " ",
+        "user_chat_query": "some query"
+    }
+    response = client.post("/api/v1/retrieve_chat_context", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_SUGGESTED_FLOW"
+
+    # Empty user_chat_query
+    payload = {
+        "rti_query": "some query",
+        "suggested_flow": "some flow",
+        "user_chat_query": ""
+    }
+    response = client.post("/api/v1/retrieve_chat_context", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_USER_CHAT_QUERY"
+
+def test_mask_and_index_completed_rti_success():
+    # Seed a test record to close
+    db = TestingSessionLocal()
+    from src.db.models import RtiQuery
+    test_query = RtiQuery(
+        rti_query_id="query_to_close",
+        inward_id="inward_close_test",
+        query_text="RTI query content by Mr. John Doe",
+        department_id=1,
+        status_id=1
+    )
+    db.add(test_query)
+    db.commit()
+    db.close()
+
+    payload = {
+        "inward_id": "inward_close_test",
+        "rti_query": "RTI query content by Mr. John Doe",
+        "office_note": "Case completed on 2026-06-22 by Officer Ram Prasad."
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 200
+    assert response.json()["error"] is None
+    assert "PII masked and RTI index updated successfully" in response.json()["message"]
+
+    # Verify database was updated
+    db = TestingSessionLocal()
+    closed_query = db.query(RtiQuery).filter(RtiQuery.inward_id == "inward_close_test").first()
+    assert closed_query.status_id == 3
+    assert len(closed_query.office_notes) >= 1
+    assert closed_query.office_notes[0].office_note == "Case completed on 2026-06-22 by Officer Ram Prasad."
+    db.close()
+
+def test_mask_and_index_completed_rti_validation_error():
+    # Empty inward_id
+    payload = {
+        "inward_id": "  ",
+        "rti_query": "query",
+        "office_note": "note"
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_INWARD_ID"
+
+    # Empty rti_query
+    payload = {
+        "inward_id": "inward_123",
+        "rti_query": "",
+        "office_note": "note"
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_RTI_QUERY"
+
+    # Empty office_note
+    payload = {
+        "inward_id": "inward_123",
+        "rti_query": "query",
+        "office_note": "   "
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 400
+    assert response.json()["error"] == "EMPTY_OFFICE_NOTE"
+
+def test_mask_and_index_completed_rti_not_found():
+    payload = {
+        "inward_id": "non_existent_inward_id",
+        "rti_query": "query",
+        "office_note": "note"
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 404
+    assert response.json()["error"] == "RECORD_NOT_FOUND"
+
+def test_mask_and_index_completed_rti_already_closed():
+    # Seed a query that is already Resolved (status_id = 3)
+    db = TestingSessionLocal()
+    from src.db.models import RtiQuery
+    test_query = RtiQuery(
+        rti_query_id="query_already_closed",
+        inward_id="inward_closed_test",
+        query_text="RTI query text",
+        department_id=1,
+        status_id=3
+    )
+    db.add(test_query)
+    db.commit()
+    db.close()
+
+    payload = {
+        "inward_id": "inward_closed_test",
+        "rti_query": "query",
+        "office_note": "note"
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 404
+    assert response.json()["error"] == "ALREADY_CLOSED"
+
+def test_mask_and_index_completed_rti_llm_error():
+    # Seed a test record
+    db = TestingSessionLocal()
+    from src.db.models import RtiQuery
+    test_query = RtiQuery(
+        rti_query_id="query_llm_error",
+        inward_id="inward_llm_error",
+        query_text="RTI query text",
+        department_id=1,
+        status_id=1
+    )
+    db.add(test_query)
+    db.commit()
+    db.close()
+
+    payload = {
+        "inward_id": "inward_llm_error",
+        "rti_query": "trigger_llm_error text",
+        "office_note": "note"
+    }
+    response = client.post("/api/v1/mask_and_index_completed_rti", json=payload)
+    assert response.status_code == 522
+    assert response.json()["error"] == "LLM_ERROR"
+
 if __name__ == "__main__":
     import pytest
     sys.exit(pytest.main([__file__]))
