@@ -19,13 +19,7 @@ router.add_api_route(
     summary="Fetch aggregate counts of RTI Queries"
 )
 
-# GET fetch_rti_query_detail
-router.add_api_route(
-    "/rti-queries/{rti_query_id}",
-    QueryController.fetch_rti_query_detail,
-    methods=["GET"],
-    summary="Fetch full details of a single RTI Query"
-)
+
 
 # POST create_rti_query
 router.add_api_route(
@@ -41,4 +35,28 @@ router.add_api_route(
     QueryController.insert_atomic_query,
     methods=["POST"],
     summary="Insert a new atomic query"
+)
+
+# GET fetch_atomic_queries
+router.add_api_route(
+    "/rti-queries/atomic-query",
+    QueryController.fetch_atomic_queries,
+    methods=["GET"],
+    summary="Fetch atomic queries for an RTI query, optionally filtered by user"
+)
+
+# GET fetch_rti_query_detail
+router.add_api_route(
+    "/rti-queries/{rti_query_id}",
+    QueryController.fetch_rti_query_detail,
+    methods=["GET"],
+    summary="Fetch full details of a single RTI Query"
+)
+
+# PUT update_rti_query
+router.add_api_route(
+    "/rti-queries/",
+    QueryController.update_rti_query,
+    methods=["PUT"],
+    summary="Update an RTI Query status and add a remark"
 )

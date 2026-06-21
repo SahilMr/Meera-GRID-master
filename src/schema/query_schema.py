@@ -3,13 +3,10 @@ from pydantic import BaseModel
 
 class RtiQueryItem(BaseModel):
     rti_query_id: str
-    inward_id: str
     query: str
-    department_id: int
     status: str
-    assigned_to: Optional[str] = None
-    assigned_at: Optional[str] = None
-
+    remark: Optional[str] = None
+    
 class RtiQueryCountData(BaseModel):
     total_count: int
     pending_count: int
@@ -49,3 +46,9 @@ class AtomicQueryCreateRequest(BaseModel):
     inward_id: Optional[str] = None
     office_note_id: Optional[str] = None
     enclosure_id: Optional[str] = None
+
+class RtiQueryUpdateRequest(BaseModel):
+    status_id: Optional[int] = None
+    remark: Optional[str] = None
+    updated_by: Optional[str] = "System"
+    rti_query_id : str

@@ -1,10 +1,11 @@
+import urllib.parse
 from typing import Optional
 from fastapi import Query, Path, Body, status, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from src.schema.common_schema import ApiResponse
-from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest
+from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest, RtiQueryUpdateRequest
 from src.service.query_service import QueryService
 from src.db.database import get_db
 
@@ -19,6 +20,9 @@ class QueryController:
         unassigned_only: bool = Query(False, description="Filter to unassigned queries only"),
         db: Session = Depends(get_db)
     ):
+        if rti_query_id:
+            rti_query_id = urllib.parse.unquote(rti_query_id)
+
         # Validation: 400 if unassigned_only is combined with assigned_to
         if unassigned_only and assigned_to:
             return JSONResponse(
@@ -98,6 +102,7 @@ class QueryController:
         rti_query_id: str = Path(..., description="The query ID"),
         db: Session = Depends(get_db)
     ):
+        rti_query_id = urllib.parse.unquote(rti_query_id)
         detail = QueryService.fetch_rti_query_detail(db, rti_query_id)
         if detail is None:
             return JSONResponse(
@@ -183,4 +188,48 @@ class QueryController:
                     "message": result["message"],
                     "error": "INSERT_FAILED"
                 }
+            )
+
+    @staticmethod
+    def fetch_atomic_queries(
+        rti_query_id: str = Query(..., description="The RTI query ID"),
+        department_mapping_id: Optional[str] = Query(None, description="Filter by department mapping master ID"),
+        db: Session = Depends(get_db)
+    ):
+        
+        rti_query_id = urllib.parse.unquote(rti_query_id)
+        records = QueryService.get_atomic_queries(db, rti_query_id, department_mapping_id)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data": records,
+                "message": "Atomic queries fetched successfully",
+                "error": None
+            }
+        )
+
+    @staticmethod
+    def update_rti_query(
+        update_data: RtiQueryUpdateRequest = Body(...),
+        db: Session = Depends(get_db)
+    ):
+        # rti_query_id = urllib.parse.unquote(rti_query_id)
+        result = QueryService.update_rti_query(
+            db=db,
+            rti_query_id=update_data.rti_query_id,
+            status_id=update_data.status_id,
+            remark=update_data.remark,
+            updated_by=update_data.updated_by
+        )
+        
+        if result["success"]:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"data": None, "message": result["message"], "error": None}
+            )
+        else:
+            status_code = status.HTTP_404_NOT_FOUND if result.get("error") == "NOT_FOUND" else status.HTTP_400_BAD_REQUEST
+            return JSONResponse(
+                status_code=status_code,
+                content={"data": None, "message": result["message"], "error": result.get("error")}
             )

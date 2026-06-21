@@ -17,6 +17,7 @@ class RtiQuery(Base):
     applicant_name = Column(String, nullable=True)
     applicant_email = Column(String, nullable=True)
     applicant_phone_number = Column(String(10), nullable=True)
+    remark = Column(String, nullable=True)
     status_id = Column(Integer, ForeignKey("status_lookup.status_id"), nullable=False)
 
     status = relationship("StatusLookup")

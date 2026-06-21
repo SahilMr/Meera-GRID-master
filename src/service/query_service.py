@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from src.db.models import RtiQuery, StatusLookup, OfficeNote, SupportingDocument, UserQuery, AtomicQuery
+from src.db.models import RtiQuery, StatusLookup, OfficeNote, SupportingDocument, UserQuery, AtomicQuery, DepartmentMappingMaster
 from src.schema.query_schema import (
     RtiQueryItem, RtiQueryCountData, OfficeNoteItem, RtiQueryDetailData
 )
@@ -26,12 +26,9 @@ class QueryService:
             return [
                 RtiQueryItem(
                     rti_query_id=query_obj.rti_query_id,
-                    inward_id=query_obj.inward_id,
-                    query=query_obj.query_text,
-                    department_id=query_obj.department_id,
+                    query=query_obj.rti_query,
                     status=query_obj.status.status_label,
-                    assigned_to=query_obj.assigned_to,
-                    assigned_at=query_obj.assigned_at
+                    remark=query_obj.remark
                 )
             ]
         
@@ -54,12 +51,9 @@ class QueryService:
         return [
             RtiQueryItem(
                 rti_query_id=q.rti_query_id,
-                inward_id=q.inward_id,
-                query=q.query_text,
-                department_id=q.department_id,
+                query=q.rti_query,
                 status=q.status.status_label,
-                assigned_to=q.assigned_to,
-                assigned_at=q.assigned_at
+                remark=q.remark
             ) for q in results
         ]
 
@@ -177,3 +171,60 @@ class QueryService:
         except Exception as e:
             db.rollback()
             return {"success": False, "message": f"Failed to insert atomic query: {str(e)}"}
+
+    @staticmethod
+    def get_atomic_queries(
+        db: Session,
+        rti_query_id: str,
+        department_mapping_id: Optional[str] = None
+    ) -> List[dict]:
+        query = db.query(AtomicQuery, DepartmentMappingMaster).outerjoin(
+            DepartmentMappingMaster, AtomicQuery.department_id == DepartmentMappingMaster.id
+        ).filter(AtomicQuery.rti_query_id == rti_query_id)
+       
+        if department_mapping_id:
+            query = query.filter(DepartmentMappingMaster.id == department_mapping_id)
+            
+        results = query.all()
+        
+        return [
+            {
+                "atomic_query_id": aq.atomic_query_id,
+                "rti_query_id": aq.rti_query_id,
+                "atomic_query": aq.atomic_query,
+                "department_id": aq.department_id,
+                "department_name": dept.department if dept else None,
+                "inward_id": aq.inward_id,
+                "office_note_id": aq.office_note_id,
+                "enclosure_id": aq.enclosure_id
+            } for aq, dept in results
+        ]
+
+    @staticmethod
+    def update_rti_query(
+        db: Session,
+        rti_query_id: str,
+        status_id: Optional[int] = None,
+        remark: Optional[str] = None,
+        updated_by: str = "System"
+    ) -> dict:
+        import datetime
+        try:
+            rti_query = db.query(RtiQuery).filter(RtiQuery.rti_query_id == rti_query_id).first()
+            if not rti_query:
+                return {"success": False, "message": "RTI Query not found", "error": "NOT_FOUND"}
+
+            if status_id is not None:
+                status_exists = db.query(StatusLookup).filter(StatusLookup.status_id == status_id).first()
+                if not status_exists:
+                    return {"success": False, "message": "Invalid status ID", "error": "INVALID_STATUS"}
+                rti_query.status_id = status_id
+
+            if remark is not None:
+                rti_query.remark = remark
+
+            db.commit()
+            return {"success": True, "message": "RTI Query updated successfully"}
+        except Exception as e:
+            db.rollback()
+            return {"success": False, "message": f"Failed to update RTI query: {str(e)}", "error": "UPDATE_FAILED"}
