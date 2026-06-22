@@ -56,7 +56,7 @@ def init_db():
             (2, "In Progress"),
             (3, "Resolved"),
             (4, "Not In Scope"),
-            (5, "Needs Revision")
+            (5, "Needs Revision"),
         ]
         for sid, label in default_statuses:
             status_obj = db.query(StatusLookup).filter(StatusLookup.status_id == sid).first()
