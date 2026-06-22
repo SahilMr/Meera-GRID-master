@@ -10,7 +10,7 @@ from src.db.database import Base, get_db
 from src.db.models import (
     StatusLookup, RtiQuery, SupportingDocument, OfficeNote,
     UserQuery, UserQuerySource, AssistantSuggestion, SuggestionSource,
-    DepartmentMappingMaster
+    DepartmentMappingMaster, AtomicQuery
 )
 from src.main import app
 from fastapi.testclient import TestClient
@@ -41,28 +41,64 @@ try:
     db.add_all(default_statuses)
     db.commit()
 
+    # 0. Seed DepartmentMappingMaster
+    dept_mappings = [
+        DepartmentMappingMaster(
+            id=1,
+            office="Office 1",
+            division_section="Div 1",
+            sub_section="Sub 1",
+            department="Dept 1",
+            user="User 1",
+            uploaded_at="2026-06-20T10:00:00Z"
+        ),
+        DepartmentMappingMaster(
+            id=2,
+            office="Office 2",
+            division_section="Div 2",
+            sub_section="Sub 2",
+            department="Dept 2",
+            user="User 2",
+            uploaded_at="2026-06-20T10:00:00Z"
+        )
+    ]
+    db.add_all(dept_mappings)
+    db.commit()
+
     # 2. Seed RtiQueries
     mock_queries = [
         RtiQuery(
             rti_query_id="query_123",
-            inward_id="mock_inward_uuid_1",
-            query_text="This is detailed mock query text.",
-            department_id=1,
+            rti_query="This is detailed mock query text.",
             status_id=1,  # Pending
-            assigned_to=None,
-            assigned_at=None
         ),
         RtiQuery(
             rti_query_id="query_2",
-            inward_id="mock_inward_uuid_2",
-            query_text="Second mock query content",
-            department_id=2,
+            rti_query="Second mock query content",
             status_id=3,  # Resolved
-            assigned_to="officer_1",
-            assigned_at="2026-06-20T10:00:00Z"
         )
     ]
     db.add_all(mock_queries)
+    db.commit()
+
+    # 2.5 Seed AtomicQueries
+    mock_atomic_queries = [
+        AtomicQuery(
+            atomic_query_id="atomic_1",
+            rti_query_id="query_123",
+            atomic_query="This is detailed mock query text.",
+            department_id=1,
+            inward_id="mock_inward_uuid_1"
+        ),
+        AtomicQuery(
+            atomic_query_id="atomic_2",
+            rti_query_id="query_2",
+            atomic_query="Second mock query content",
+            department_id=2,
+            inward_id="mock_inward_uuid_2"
+        )
+    ]
+    db.add_all(mock_atomic_queries)
     db.commit()
 
     # 3. Seed Supporting Documents
@@ -435,15 +471,21 @@ def test_retrieve_chat_context_validation_error():
 def test_mask_and_index_completed_rti_success():
     # Seed a test record to close
     db = TestingSessionLocal()
-    from src.db.models import RtiQuery
+    from src.db.models import RtiQuery, AtomicQuery
     test_query = RtiQuery(
         rti_query_id="query_to_close",
-        inward_id="inward_close_test",
-        query_text="RTI query content by Mr. John Doe",
-        department_id=1,
+        rti_query="RTI query content by Mr. John Doe",
         status_id=1
     )
     db.add(test_query)
+    test_atomic = AtomicQuery(
+        atomic_query_id="atomic_close_test",
+        rti_query_id="query_to_close",
+        atomic_query="RTI query content by Mr. John Doe",
+        department_id=1,
+        inward_id="inward_close_test"
+    )
+    db.add(test_atomic)
     db.commit()
     db.close()
 
@@ -459,7 +501,8 @@ def test_mask_and_index_completed_rti_success():
 
     # Verify database was updated
     db = TestingSessionLocal()
-    closed_query = db.query(RtiQuery).filter(RtiQuery.inward_id == "inward_close_test").first()
+    atomic = db.query(AtomicQuery).filter(AtomicQuery.inward_id == "inward_close_test").first()
+    closed_query = db.query(RtiQuery).filter(RtiQuery.rti_query_id == atomic.rti_query_id).first()
     assert closed_query.status_id == 3
     assert len(closed_query.office_notes) >= 1
     assert closed_query.office_notes[0].office_note == "Case completed on 2026-06-22 by Officer Ram Prasad."
@@ -509,15 +552,21 @@ def test_mask_and_index_completed_rti_not_found():
 def test_mask_and_index_completed_rti_already_closed():
     # Seed a query that is already Resolved (status_id = 3)
     db = TestingSessionLocal()
-    from src.db.models import RtiQuery
+    from src.db.models import RtiQuery, AtomicQuery
     test_query = RtiQuery(
         rti_query_id="query_already_closed",
-        inward_id="inward_closed_test",
-        query_text="RTI query text",
-        department_id=1,
+        rti_query="RTI query text",
         status_id=3
     )
     db.add(test_query)
+    test_atomic = AtomicQuery(
+        atomic_query_id="atomic_already_closed",
+        rti_query_id="query_already_closed",
+        atomic_query="RTI query text",
+        department_id=1,
+        inward_id="inward_closed_test"
+    )
+    db.add(test_atomic)
     db.commit()
     db.close()
 
@@ -533,15 +582,21 @@ def test_mask_and_index_completed_rti_already_closed():
 def test_mask_and_index_completed_rti_llm_error():
     # Seed a test record
     db = TestingSessionLocal()
-    from src.db.models import RtiQuery
+    from src.db.models import RtiQuery, AtomicQuery
     test_query = RtiQuery(
         rti_query_id="query_llm_error",
-        inward_id="inward_llm_error",
-        query_text="RTI query text",
-        department_id=1,
+        rti_query="RTI query text",
         status_id=1
     )
     db.add(test_query)
+    test_atomic = AtomicQuery(
+        atomic_query_id="atomic_llm_error",
+        rti_query_id="query_llm_error",
+        atomic_query="RTI query text",
+        department_id=1,
+        inward_id="inward_llm_error"
+    )
+    db.add(test_atomic)
     db.commit()
     db.close()
 

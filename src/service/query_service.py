@@ -40,11 +40,11 @@ class QueryService:
             query = query.filter(RtiQuery.status_id == status_id)
             
         if assigned_to is not None:
-            query = query.filter(RtiQuery.assigned_to == assigned_to)
+            # Since assigned_to was removed from RtiQuery, no records can match this filter.
+            return []
             
-        if unassigned_only:
-            query = query.filter(RtiQuery.assigned_to.is_(None))
-            
+        # if unassigned_only is True, all queries are effectively unassigned since assigned_to column doesn't exist
+        
         # Apply pagination
         results = query.offset(offset).limit(limit).all()
         
@@ -90,17 +90,23 @@ class QueryService:
         if not q:
             return None
             
+        # Get details from associated AtomicQuery if it exists
+        atomic = db.query(AtomicQuery).filter(AtomicQuery.rti_query_id == rti_query_id).first()
+        inward_id = atomic.inward_id if atomic else "N/A"
+        query_text = atomic.atomic_query if atomic else (q.rti_query or "")
+        department_id = atomic.department_id if atomic else 0
+        
         # Sort notes newest first
         sorted_notes = sorted(q.office_notes, key=lambda x: x.created_at, reverse=True)
         
         return RtiQueryDetailData(
             rti_query_id=q.rti_query_id,
-            inward_id=q.inward_id,
-            query_text=q.query_text,
-            department_id=q.department_id,
+            inward_id=inward_id,
+            query_text=query_text,
+            department_id=department_id,
             status=q.status.status_label,
-            assigned_to=q.assigned_to,
-            assigned_at=q.assigned_at,
+            assigned_to=None,
+            assigned_at=None,
             supporting_documents=[doc.document_url for doc in q.supporting_documents],
             office_notes=[
                 OfficeNoteItem(
@@ -230,6 +236,7 @@ class QueryService:
             db.commit()
             return {"success": True, "message": "RTI Query updated successfully"}
         except Exception as e:
+            print("UPdate Exception: ",e)
             db.rollback()
             return {"success": False, "message": f"Failed to update RTI query: {str(e)}", "error": "UPDATE_FAILED"}
 

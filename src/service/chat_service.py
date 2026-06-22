@@ -262,12 +262,16 @@ class ChatService:
         import os
         import uuid
         from datetime import datetime
-        from src.db.models import RtiQuery, OfficeNote
+        from src.db.models import RtiQuery, OfficeNote, AtomicQuery
         from src.core.singletons import get_faiss_index, VECTORSTORE_DIR
         from src.utils.llm_client import LLMClient
         
-        # 1. Validate active record
-        record = db.query(RtiQuery).filter(RtiQuery.inward_id == inward_id).first()
+        # 1. Validate active record via AtomicQuery mapping
+        atomic = db.query(AtomicQuery).filter(AtomicQuery.inward_id == inward_id).first()
+        if not atomic:
+            raise KeyError("NOT_FOUND")
+            
+        record = db.query(RtiQuery).filter(RtiQuery.rti_query_id == atomic.rti_query_id).first()
         if not record:
             raise KeyError("NOT_FOUND")
             

@@ -219,7 +219,7 @@ class QueryController:
         file_bytes = None
         if collated_office_note:
             file_bytes = await collated_office_note.read()
-
+        print("FILE BYTES", file_bytes)
         result = QueryService.update_rti_query(
             db=db,
             rti_query_id=rti_query_id,

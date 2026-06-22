@@ -46,6 +46,30 @@ class LLMClient:
     def mock_completion(prompt: str) -> str:
         if "trigger_llm_error" in prompt:
             return ""
+
+        # Initial Suggestion simulation
+        if "Suggested next steps flow" in prompt or "similar past" in prompt.lower():
+            query = "the query"
+            query_match = re.search(r'Current RTI Query:\s*(.*)', prompt, re.IGNORECASE)
+            if query_match:
+                query = query_match.group(1).strip().split('\n')[0]
+                
+            return f"Action Plan for: {query}\n" \
+                   f"1. Context Verification: Validate incoming details against department records.\n" \
+                   f"2. Department Routing: Assign the relevant sections based on similar historical cases.\n" \
+                   f"3. Draft Response: Formulate the official reply addressing the specific points raised."
+
+        # Chat Context simulation
+        if "chat" in prompt.lower() or "user_chat_query" in prompt.lower():
+            latest_query = "your query"
+            query_match = re.search(r'(?:User\'s Latest Query:|user_chat_query)\s*(.*)', prompt, re.IGNORECASE)
+            if query_match:
+                latest_query = query_match.group(1).strip().split('\n')[0]
+                
+            return f"Based on the conversation state and retrieved historical notes: regarding '{latest_query}', " \
+                   f"the policy dictates that we must provide the requested records within 30 days. " \
+                   f"Please verify if any exemptions apply under Section 8 before releasing the data."
+
         # PII Masking simulation
         if "PII masking" in prompt or "PII" in prompt or "mask" in prompt.lower():
             text_to_mask = prompt
@@ -71,28 +95,5 @@ class LLMClient:
             masked = re.sub(r'\b\d{4}-\d{4}-\d{4}\b', "<ID_1>", masked)
             masked = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', "<ID_1>", masked)
             return masked
-
-        # Initial Suggestion simulation
-        if "Suggested next steps flow" in prompt or "similar past" in prompt.lower():
-            query = "the query"
-            query_match = re.search(r'Current RTI Query:\s*(.*)', prompt, re.IGNORECASE)
-            if query_match:
-                query = query_match.group(1).strip().split('\n')[0]
-                
-            return f"Action Plan for: {query}\n" \
-                   f"1. Context Verification: Validate incoming details against department records.\n" \
-                   f"2. Department Routing: Assign the relevant sections based on similar historical cases.\n" \
-                   f"3. Draft Response: Formulate the official reply addressing the specific points raised."
-
-        # Chat Context simulation
-        if "chat" in prompt.lower() or "user_chat_query" in prompt.lower():
-            latest_query = "your query"
-            query_match = re.search(r'(?:User\'s Latest Query:|user_chat_query)\s*(.*)', prompt, re.IGNORECASE)
-            if query_match:
-                latest_query = query_match.group(1).strip().split('\n')[0]
-                
-            return f"Based on the conversation state and retrieved historical notes: regarding '{latest_query}', " \
-                   f"the policy dictates that we must provide the requested records within 30 days. " \
-                   f"Please verify if any exemptions apply under Section 8 before releasing the data."
 
         return "This is a simulated assistant response based on the prompt."
