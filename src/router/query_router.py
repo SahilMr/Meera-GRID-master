@@ -45,6 +45,14 @@ router.add_api_route(
     summary="Fetch atomic queries for an RTI query, optionally filtered by user"
 )
 
+# GET fetch_atomic_query_office_notes
+router.add_api_route(
+    "/rti-queries/atomic-notes",
+    QueryController.fetch_atomic_query_office_notes,
+    methods=["GET"],
+    summary="Fetch all atomic query office notes for an RTI Query"
+)
+
 # GET fetch_rti_query_detail
 router.add_api_route(
     "/rti-queries/{rti_query_id}",
@@ -68,3 +76,12 @@ router.add_api_route(
     methods=["PUT"],
     summary="Update an Atomic Query"
 )
+
+# PUT mark_atomic_query
+router.add_api_route(
+    "/rti-queries/atomic/mark",
+    QueryController.mark_atomic_query,
+    methods=["PUT"],
+    summary="Mark off an Atomic Query and publish draft creation event"
+)
+

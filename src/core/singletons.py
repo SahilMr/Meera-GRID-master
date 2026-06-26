@@ -20,9 +20,7 @@ def get_embedding_model() -> EmbeddingModel:
     return _embedding_model
 
 def get_faiss_index() -> FAISSIndex:
-    print("I AMA HERE")
     global _faiss_index
-    print(1)
     if _faiss_index is None:
         with _init_lock:
             if _faiss_index is None:

@@ -6,6 +6,7 @@ class RtiQueryItem(BaseModel):
     query: str
     status: str
     remark: Optional[str] = None
+    collated_office_note: Optional[str] = None
     
 class RtiQueryCountData(BaseModel):
     total_count: int
@@ -46,3 +47,6 @@ class AtomicQueryCreateRequest(BaseModel):
     inward_id: Optional[str] = None
     office_note_id: Optional[str] = None
     enclosure_id: Optional[str] = None
+
+class MarkAtomicQueryRequest(BaseModel):
+    atomic_query_id: str

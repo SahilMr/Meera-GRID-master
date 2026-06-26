@@ -133,3 +133,6 @@ class AtomicQuery(Base):
     office_note_id = Column(String(100), nullable=True)
     enclosure_id = Column(String(100), nullable=True)
     atomic_query_office_note = Column(LargeBinary, nullable=True)
+    status_id = Column(Integer, ForeignKey("status_lookup.status_id"), nullable=True)
+
+    status = relationship("StatusLookup")

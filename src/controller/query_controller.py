@@ -4,7 +4,7 @@ from fastapi import Query, Path, Body, status, Depends, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from src.schema.common_schema import ApiResponse
-from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest
+from src.schema.query_schema import RtiQueryCreateRequest, AtomicQueryCreateRequest, MarkAtomicQueryRequest
 from src.service.query_service import QueryService
 from src.db.database import get_db
 
@@ -208,6 +208,23 @@ class QueryController:
         )
 
     @staticmethod
+    def fetch_atomic_query_office_notes(
+        rti_query_id: str = Query(..., description="The RTI query ID"),
+        db: Session = Depends(get_db)
+    ):
+       
+        rti_query_id = urllib.parse.unquote(rti_query_id)
+        records = QueryService.fetch_atomic_query_office_notes(db, rti_query_id)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data": records,
+                "message": "Atomic query office notes fetched successfully",
+                "error": None
+            }
+        )
+
+    @staticmethod
     async def update_rti_query(
         rti_query_id: str = Form(..., description="The query ID"),
         status_id: Optional[int] = Form(None, description="Status lookup ID"),
@@ -266,6 +283,24 @@ class QueryController:
             )
         else:
             status_code = status.HTTP_404_NOT_FOUND if result.get("error") == "NOT_FOUND" else status.HTTP_400_BAD_REQUEST
+            return JSONResponse(
+                status_code=status_code,
+                content={"data": None, "message": result["message"], "error": result.get("error")}
+            )
+
+    @staticmethod
+    def mark_atomic_query(
+        request: MarkAtomicQueryRequest = Body(...),
+        db: Session = Depends(get_db)
+    ):
+        result = QueryService.mark_atomic_query(db, request)
+        if result["success"]:
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"data": None, "message": result["message"], "error": None}
+            )
+        else:
+            status_code = status.HTTP_404_NOT_FOUND if result.get("error") == "NOT_FOUND" else status.HTTP_500_INTERNAL_SERVER_ERROR
             return JSONResponse(
                 status_code=status_code,
                 content={"data": None, "message": result["message"], "error": result.get("error")}

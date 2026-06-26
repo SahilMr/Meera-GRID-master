@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from src.db.models import RtiQuery, StatusLookup, OfficeNote, SupportingDocument, UserQuery, AtomicQuery, DepartmentMappingMaster
 from src.schema.query_schema import (
-    RtiQueryItem, RtiQueryCountData, OfficeNoteItem, RtiQueryDetailData
+    RtiQueryItem, RtiQueryCountData, OfficeNoteItem, RtiQueryDetailData , MarkAtomicQueryRequest
 )
 
 class QueryService:
@@ -23,12 +23,18 @@ class QueryService:
             if not query_obj:
                 return []
             
+            import base64
+            collated_base64 = None
+            if query_obj.collated_office_note:
+                collated_base64 = base64.b64encode(query_obj.collated_office_note).decode('utf-8')
+            
             return [
                 RtiQueryItem(
                     rti_query_id=query_obj.rti_query_id,
                     query=query_obj.rti_query or query_obj.query_text or "",
                     status=query_obj.status.status_label,
-                    remark=query_obj.remark
+                    remark=query_obj.remark,
+                    collated_office_note=collated_base64
                 )
             ]
         
@@ -48,12 +54,14 @@ class QueryService:
         # Apply pagination
         results = query.offset(offset).limit(limit).all()
         
+        import base64
         return [
             RtiQueryItem(
                 rti_query_id=q.rti_query_id,
                 query=q.rti_query or q.query_text or "",
                 status=q.status.status_label,
-                remark=q.remark
+                remark=q.remark,
+                collated_office_note=base64.b64encode(q.collated_office_note).decode('utf-8') if q.collated_office_note else None
             ) for q in results
         ]
 
@@ -202,9 +210,37 @@ class QueryService:
                 "department_name": dept.department if dept else None,
                 "inward_id": aq.inward_id,
                 "office_note_id": aq.office_note_id,
-                "enclosure_id": aq.enclosure_id
+                "enclosure_id": aq.enclosure_id,
+                "status_id":aq.status_id
             } for aq, dept in results
         ]
+
+    @staticmethod
+    def fetch_atomic_query_office_notes(db: Session, rti_query_id: str) -> list:
+        import base64
+        print("RTI_QUERY_ID : ",rti_query_id)
+        results = db.query(AtomicQuery).filter(AtomicQuery.rti_query_id == rti_query_id).all()
+        
+        notes_data = []
+        for aq in results:
+            note_base64 = None
+            note_text = None
+            if aq.atomic_query_office_note:
+                note_base64 = base64.b64encode(aq.atomic_query_office_note).decode('utf-8')
+                try:
+                    note_text = aq.atomic_query_office_note.decode('utf-8', errors='ignore')
+                except Exception:
+                    note_text = None
+            
+            notes_data.append({
+                "atomic_query_id": aq.atomic_query_id,
+                "atomic_query": aq.atomic_query,
+                "department_id": aq.department_id,
+                "office_note_base64": note_base64,
+                "atomic_query_office_note": note_text,
+            })
+            print("NOTES : ",notes_data)
+        return notes_data
 
     @staticmethod
     def update_rti_query(
@@ -260,3 +296,38 @@ class QueryService:
         except Exception as e:
             db.rollback()
             return {"success": False, "message": f"Failed to update Atomic Query: {str(e)}", "error": "UPDATE_FAILED"}
+
+    @staticmethod
+    def mark_atomic_query(db: Session, request: MarkAtomicQueryRequest) -> dict:
+        from src.utils.kafka_producer import publish_draft_event
+        try:
+            atomic_query = db.query(AtomicQuery).filter(AtomicQuery.atomic_query_id == request.atomic_query_id).first()
+            if not atomic_query:
+                return {"success": False, "message": "Atomic Query not found", "error": "NOT_FOUND"}
+
+            # Status 3 means mark off is done
+            atomic_query.status_id = 3
+            db.flush() # Ensure the status update is visible in the current session
+
+            # Check if all atomic queries related to this RTI query are completed (status_id == 3)
+            all_atomic_queries = db.query(AtomicQuery).filter(AtomicQuery.rti_query_id == atomic_query.rti_query_id).all()
+            all_completed = all(aq.status_id == 3 for aq in all_atomic_queries)
+
+            if all_completed:
+                # Add message to kafka to create a draft
+                kafka_payload = {
+                    "rti_id": atomic_query.rti_query_id
+                }
+                
+                publish_success = publish_draft_event(kafka_payload)
+                if not publish_success:
+                    print(f"Warning: Failed to publish draft event for atomic_query_id: {request.atomic_query_id}")
+                message = "Atomic Query marked off and draft event published"
+            else:
+                message = "Atomic Query marked off successfully (waiting for other atomic queries to complete)"
+
+            db.commit()
+            return {"success": True, "message": message}
+        except Exception as e:
+            db.rollback()
+            return {"success": False, "message": f"Failed to mark off Atomic Query: {str(e)}", "error": "MARK_FAILED"}

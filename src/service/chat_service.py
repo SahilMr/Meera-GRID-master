@@ -12,29 +12,94 @@ from src.schema.chat_schema import (
 class ChatService:
     @staticmethod
     def user_query(db: Session, request: UserQueryRequest) -> List[UserQueryResponseData]:
+        import os
+        from src.core.singletons import get_faiss_index
+        from src.utils.llm_client import LLMClient
+        from datetime import datetime
+        
         query_id = str(uuid.uuid4())
         created_at = datetime.utcnow().isoformat() + "Z"
         
-        # Mock some logic if query is specific for testing
         if request.user_query.strip() == "mock_query_for_test":
             query_id = "mock_query_uuid"
+
+        # 1. Classify the user query
+        classification_prompt_path = os.path.join("prompts", "user_query_classification_prompt.txt")
+        if os.path.exists(classification_prompt_path):
+            with open(classification_prompt_path, "r", encoding="utf-8") as f:
+                class_prompt_template = f.read()
+            class_prompt = class_prompt_template.format(user_query=request.user_query)
+            classification = LLMClient.generate_completion(class_prompt).strip().lower()
+        else:
+            classification = "query" # fallback
+
+        office_notes = []
+        matches = []
         
+        if "greetings" in classification:
+            current_hour = datetime.now().hour
+            if current_hour < 12:
+                greeting = "Good morning! How can I assist you with RTI queries today?"
+            elif current_hour < 17:
+                greeting = "Good afternoon! How can I assist you with RTI queries today?"
+            else:
+                greeting = "Good evening! How can I assist you with RTI queries today?"
+            asst_response = greeting
+        elif "out_of_scope" in classification:
+            asst_response = "No knowledge found for the query asked."
+        else:
+            # default to 'query' handling
+            faiss_index = get_faiss_index()
+            matches = faiss_index.similarity_search_with_score(request.user_query, k=3)
+            
+            print("********************* MATCHES ********************* : ",matches)
+    
+            prompt_path = os.path.join("prompts", "user_query_summary_prompt.txt")
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+                
+            matches_formatted = ""
+            for i, (meta, score) in enumerate(matches, 1):
+                rti_q = meta.get("rti_query", "N/A")
+                off_note = meta.get("office_note", "N/A")
+                matches_formatted += f"Match {i}:\nRTI Query: {rti_q}\nOffice Note: {off_note}\n\n"
+                office_notes.append(f"--- Note {i} ---\n{off_note}")
+                
+            if matches_formatted:
+                prompt = prompt_template.format(
+                    user_query=request.user_query,
+                    matches_formatted=matches_formatted
+                )
+                summary = LLMClient.generate_completion(prompt)
+                if not summary:
+                    summary = "Failed to generate summary from LLM."
+            else:
+                summary = "No relevant past queries found to generate a summary."
+                
+            asst_response = summary
+            if office_notes:
+                asst_response += "\n\n### Actual Office Notes:\n\n" + "\n\n".join(office_notes)
+            
         new_query = UserQuery(
             query_id=query_id,
             rti_query_id=request.rti_query_id,
             user_id=request.user_id,
             user_query=request.user_query,
-            asst_response="Mock response for user query.",
+            asst_response=asst_response,
             created_at=created_at
         )
         db.add(new_query)
         db.flush()  # get foreign key checks done
         
-        new_source = UserQuerySource(
-            query_id=query_id,
-            source_name="source_document_1.pdf"
-        )
-        db.add(new_source)
+        if office_notes:
+            for i, (meta, _) in enumerate(matches, 1):
+                rti_q = meta.get("rti_query", "N/A")
+                # source_name length limit is 200 based on the DB schema
+                source_name = f"Matched Query {i}: {rti_q[:150]}..." if len(rti_q) > 150 else f"Matched Query {i}: {rti_q}"
+                db.add(UserQuerySource(query_id=query_id, source_name=source_name))
+        else:
+            db.add(UserQuerySource(query_id=query_id, source_name="No matched sources"))
+            
         db.commit()
         db.refresh(new_query)
         
